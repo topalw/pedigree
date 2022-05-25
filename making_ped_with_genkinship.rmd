@@ -170,7 +170,11 @@ NOICE! Now keep doing this!  - line by line this time ! -
 
 - M005026 is the father of M001670  since k0 = `r round(k0[which(rownames(k0)=='875626'), which(rownames(k0)=='877861')])` and k1 = `r round(k1[which(rownames(k0)=='875626'), which(rownames(k0)=='877861')])` and M001670 comes from no clutch we know while M005026 was born in a known clutch 3 years before M001670 was first seen. Unknown parents means we add the parent we know and add an unknw# marker for the mother to avoid single parents.   
 
-- M005188 and M005447 M011005 are unrelated. simply replace this individual at father id of those two with unknwn2. These individuals are indeed half-sibs with the other members of the family. Verified with microsatellites. 
+- M005188 and M005447 M011005 are unrelated. simply replace this individual at father id of those two with unknwn2. These individuals are indeed half-sibs with the other members of the family. Verified with microsatellites.  
+
+- 895274 and M011142. M011142 is the father of 895274 since k0 =  `r round(k0[which(rownames(k0)=='895274'), which(rownames(k0)=='M011142')])` and k1 = `r round(k1[which(rownames(k0)=='895274'), which(rownames(k0)=='M011142')])` and also M011142 was born in 2007 and 895274 was first seen in 2009 - also M011142 is from a verified hatch clutch where both mother and father are known.   
+
+- 
 ```{r correct ped 2}
 # 875626 and 877861 
 mp[mp$id == '877861', ]  # shitty father id 
@@ -185,5 +189,9 @@ mp <- rbind(mp, add.founder('unknwn1',2))
 mp[mp$id == 'M005447', 2] <- 'unknwn2'
 mp[mp$id == 'M011005', 2] <- 'unknwn2'
 mp <- rbind(mp, add.founder('unknwn2',1))
+#895274 and M011142 
+mp[mp$id == '895274',2] <- 'M011142' 
+mp[mp$id == '895274',3] <- 'unknwn3'
+mp <- rbind(mp, add.founder('unknwn3',2))
 #
 ```
