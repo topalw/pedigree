@@ -10,11 +10,16 @@ output:
 
 This document serves a double purpose. A log of how I manually curated our pedigree links 
 using genomic data and a script to replicate the process. You require the things loaded 
-in the following code block (3 packages) and some files:  
+in the following code block (3 packages) and some files:   
+
 - 3 table files originating from a gds file *(!might want to incorporate code here!)*  
-- a previously curated pedigree of founders + families (s)  
-- a total pedigree from the barn owl database  
-- a metadata file with sample names and populations in the reference panel  
+
+- a previously curated pedigree of founders + families (s)   
+
+- a total pedigree from the barn owl database   
+
+- a metadata file with sample names and populations in the reference panel   
+
 
 ```{r packages and files, message =F}
 library(kinship2) # pedigree making +
@@ -93,12 +98,92 @@ and the first year individuals were observed (example if an individual was obser
 another in 2016 and we observe a P-O link we know the 2014 has to be the parent ;) )  
 
 ```{r check df of bad links}
-bl <- data.frame(which(abs(d) >= 0.16, arr.ind=T),row.names = NULL) #bl == broken links
+# cheat and make lower part 0 to escape having the same broken link twice!
+tmpd <- d 
+tmpd[lower.tri(tmpd)] <- 0 
+bl <- data.frame(which(abs(tmpd) >= 0.16, arr.ind=T),row.names = NULL) #bl == broken links
 #fix dataframe a bit
 bl$row <- rownames(b)[bl$row]
 bl$col <- rownames(b)[bl$col]
 colnames(bl) <- c('ind1','ind2')
-bl <- unique(bl)
-head(bl)
-kable(bl[1:10,],caption='bad links')
+# add beta information 
+bl$bg <- 0 # beta genome
+bl$bp <- 0 # beta pedigree
+for(i in 1:nrow(bl)){ # fancy loop a foolproof way of doing it
+  bl$bg[i] <- b[match(bl$ind1[i],rownames(b)), match(bl$ind2[i],rownames(b))]
+  bl$bp[i] <- kp[match(bl$ind1[i],rownames(kp)), match(bl$ind2[i],rownames(kp))]
+}
+kable(bl,caption='Bad links')
+```  
+
+This table needs to be reduced to 0 based on manual inspection. A daunting task. Dirty work.
+Terrible endeavor. Let's do it!  
+
+We can start by identifying clusters of bad links that are created by 1 individual misclasified in the pedigree and correcting those.   
+
+- M0052221 case - For example the individual M0052221 observed in the head above! That guy is unrelated with his family (identified previously during family reconstruction but since I am redoing everything here I can also document those broken links (FML)). This guy also has no other relatives in the beta matrix of genomic kinship so we might as well consider him an unrelated individual.   
+Now the way to correct this guy would be to update the pedigreee information for this guy. However we cannot do this in a subset pedigree that only includes sequenced individuals since that pedigree might infer erroneous kinship because of missing individuals (think of F2 cousins where F0 was not sequenced and is thus missing). Thus we make a copy of the total pedigree and we modify that accordingly. For this case we just set the parents to founders!   
+
+
+```{r correct ped 1}
+# M0052221
+# which(b[rownames(b)=='M005221',] > 0.16 ) # only the diagonal 
+mp <- p[c(1,2,3,5)] # modified pedigree
+mp[mp$id == 'M005221', c(2,3)] <- c(NA,NA)
+mp[mp$id == 'M005221',] #  fixed ! 
+```  
+
+Obviously now we need to update the difference dataset with the new pedigree so we make a function that does that and we persevere.  
+
+```{r update function}
+# beast fuction to update difference dataset everytime we modify an individual 
+update.diff <- function(mp,b){ # takes a pedigree and a beta matrix 
+  mpk <- kinship(mp$id,mp$dadid,mp$momid) # get kinship
+  binmp <- match(rownames(b), rownames(mpk)) # matches 
+  mpk <- mpk[binmp,binmp]
+  tmpd <- diff.k(mpk,b) # makes difference
+  # does what {r check df of bad links} does !
+  tmpd[lower.tri(tmpd)] <- 0 
+  bl <- data.frame(which(abs(tmpd) >= 0.16, arr.ind=T),row.names = NULL) 
+  bl$row <- rownames(b)[bl$row]
+  bl$col <- rownames(b)[bl$col]
+  colnames(bl) <- c('ind1','ind2')
+  bl$bg <- 0 
+  bl$bp <- 0 
+  for(i in 1:nrow(bl)){ 
+   bl$bg[i] <- b[match(bl$ind1[i],rownames(b)), match(bl$ind2[i],rownames(b))]
+   bl$bp[i] <- mpk[match(bl$ind1[i],rownames(mpk)), match(bl$ind2[i],rownames(mpk))]
+  }
+  return(bl)
+}
+#function to make founder line for ped
+add.founder <- function(id,sex=1){
+  return(data.frame('id'=id,'dadid'=NA,'momid'=NA,'sex'=sex))
+}
+bl <- update.diff(mp,b)
+kable(bl[1:10,],caption = 'Bad links - update1' )
+```  
+
+NOICE! Now keep doing this!  - line by line this time ! -   
+
+- 875626 and 877861 are P-O as indicated from their K0 = `r round(k0[which(rownames(k0)=='875626'), which(rownames(k0)=='877861')])` and k1 = `r round(k1[which(rownames(k0)=='875626'), which(rownames(k0)=='877861')])`. 877861 was born 3 years after 875626 was first seen in a clutch without a father so mystery solved. However the clutch that the indivudal belongs was assigned a fake father ID (since kinship cannot handle a pedigree with single parents so now we need to basically replace all lines with 884736_1	 as the father id )    
+
+- M005026 is the father of M001670  since k0 = `r round(k0[which(rownames(k0)=='875626'), which(rownames(k0)=='877861')])` and k1 = `r round(k1[which(rownames(k0)=='875626'), which(rownames(k0)=='877861')])` and M001670 comes from no clutch we know while M005026 was born in a known clutch 3 years before M001670 was first seen. Unknown parents means we add the parent we know and add an unknw# marker for the mother to avoid single parents.   
+
+- M005188 and M005447 M011005 are unrelated. simply replace this individual at father id of those two with unknwn2. These individuals are indeed half-sibs with the other members of the family. Verified with microsatellites. 
+```{r correct ped 2}
+# 875626 and 877861 
+mp[mp$id == '877861', ]  # shitty father id 
+mp$dadid[mp$dadid == '884736_1' & ! is.na(mp$dadid) ] <-  rep('875626' , 4)
+mp[mp$dadid == '875626' & ! is.na(mp$dadid), ]
+# M005026 and M001670
+mp[mp$id == 'M001670', 2] <- 'M005026'
+mp[mp$id == 'M001670', 3] <- 'unknwn1'
+# use function to add founder to ped
+mp <- rbind(mp, add.founder('unknwn1',2))
+# M005188 and M005447 M011005 
+mp[mp$id == 'M005447', 2] <- 'unknwn2'
+mp[mp$id == 'M011005', 2] <- 'unknwn2'
+mp <- rbind(mp, add.founder('unknwn2',1))
+#
 ```
