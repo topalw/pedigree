@@ -10,20 +10,17 @@ output:
 
 This document serves a double purpose. A log of how I manually curated our pedigree links 
 using genomic data and a script to replicate the process. You require the things loaded 
-in the following code block (3 packages):      
-- kinship2 used to create and plot a pedigree and create a kinship matrix  
-- dplyr for dataframe inner and outer joins   
-- corrplot for correlation plots   
-and some files:  
+in the following code block (3 packages) and some files:  
 - 3 table files originating from a gds file *(!might want to incorporate code here!)*  
 - a previously curated pedigree of founders + families (s)  
 - a total pedigree from the barn owl database  
 - a metadata file with sample names and populations in the reference panel  
 
-```{r packages and files, results='hide'}
-library(kinship2)
-library(dplyr)
-library(corrplot)
+```{r packages and files, message =F}
+library(kinship2) # pedigree making +
+library(dplyr) # probably not used 
+library(corrplot) # well....corrplots
+library(knitr) # kable ! 
 #setwd('C:/Users/topalw/Desktop/PhD/Analyses/5.ref_panel/')
 metadata <- read.csv('metadata/refpanel_metadata.csv')
 s <- read.delim('Ped_file_Ref_panel_final.txt',sep='',h=F) # s-equenced pedigree
@@ -75,8 +72,9 @@ add.alpha <- function(col, alpha=1){
 }
 #plotting function
 plot.diff <- function(d.mat,cutoff){
-  corrplot(d.mat, method='shade',type='upper',tl.pos='n',is.corr=F,diag=F)
-  plot(d.mat[upper.tri(d.mat,diag=T)], pch=20, col = add.alpha('black',0.6),cex=0.6)
+  #corrplot(d.mat, method='shade',type='upper',tl.pos='n',is.corr=F,diag=F)
+  plot(d.mat[upper.tri(d.mat,diag=T)], pch=20, col = add.alpha('black',0.6),cex=0.6,
+       ylab='pedigree - genetic kinship')
   abline(h=cutoff,lty=2,col='red')
   abline(h=-cutoff,lty=2,col='red')
 }
@@ -89,9 +87,20 @@ plot.diff(d,0.16)
 ```   
 
 Arguably the matrix difference plot is not the most helpful but I like looking at it! 
-Now we can identify these pais of individuals that lead to most extreme differences (abs(k.diff)>0.16) 
+Now we can identify these pairs of individuals that lead to most extreme differences (abs(k.diff)>0.16) 
 and the reason we only consider these differences is because they are probably the only ones we can correct since 2 degrees of relatedness are much harder to infer.   
 We will treat all errors separately but our tools are the same. Pairwise b estimation of individuals 
-and their relatives, k0-k1 plots to identify directionality of 1st degree links (P-O or Siblings) 
+and their relatives, k0-k1 plots to identify type of 1st degree links (P-O or Siblings) 
 and the first year individuals were observed (example if an individual was observed in 2014 and
-another in 2016 and we observe a P-O link)
+another in 2016 and we observe a P-O link we know the 2014 has to be the parent ;) )  
+
+```{r check df of bad links}
+bl <- data.frame(which(abs(d) >= 0.16, arr.ind=T),row.names = NULL) #bl == broken links
+#fix dataframe a bit
+bl$row <- rownames(b)[bl$row]
+bl$col <- rownames(b)[bl$col]
+colnames(bl) <- c('ind1','ind2')
+bl <- unique(bl)
+head(bl)
+kable(bl[1:10,],caption='bad links')
+```
