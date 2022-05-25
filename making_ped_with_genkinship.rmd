@@ -1,0 +1,97 @@
+---
+title: "Fixing the pedigree with kinship"
+author: "Alexandros Topaloudis"
+output:
+  html_document:
+    df_print: paged
+---
+
+# Purpose statement  
+
+This document serves a double purpose. A log of how I manually curated our pedigree links 
+using genomic data and a script to replicate the process. You require the things loaded 
+in the following code block (3 packages):      
+- kinship2 used to create and plot a pedigree and create a kinship matrix  
+- dplyr for dataframe inner and outer joins   
+- corrplot for correlation plots   
+and some files:  
+- 3 table files originating from a gds file *(!might want to incorporate code here!)*  
+- a previously curated pedigree of founders + families (s)  
+- a total pedigree from the barn owl database  
+- a metadata file with sample names and populations in the reference panel  
+
+```{r packages and files, results='hide'}
+library(kinship2)
+library(dplyr)
+library(corrplot)
+#setwd('C:/Users/topalw/Desktop/PhD/Analyses/5.ref_panel/')
+metadata <- read.csv('metadata/refpanel_metadata.csv')
+s <- read.delim('Ped_file_Ref_panel_final.txt',sep='',h=F) # s-equenced pedigree
+colnames(s) <- c('famid','id','dadid','momid','sex','miss','hub')
+b <- read.table('beta_of_all/swiss_beta_matrix.table') # b-eta table of kinship
+b <- b[-which(rownames(b)=='877825F2'),-which(rownames(b)=='877825F2')] #to avoid duplicated issue
+rownames(b) <- metadata$NEWname[match(rownames(b),metadata$rawVCFname)]
+k0 <- read.table('ref_panel_k0.table')
+k1 <- read.table('ref_panel_k1.table')
+p <- read.csv('total_pedigree_052022.csv') # p-edigree
+#pped <- pedigree(p$id,p$dadid,p$momid,p$sex)
+```  
+
+# The process   
+A way to start is with a comparison of the pedigree inferred kinship matrix and the genomic kinship matrix. 
+Intuitively the difference of values observed for each cell should be just due to recombinational variance 
+from generation to generation (pedigree kinship is simply the expected value instead of the realized 
+Speed & Balding 2015 - Table 1). However big deviations will be due to incorrect pedigree links 
+or sequencing errors. It is sometimes hard to differentiate the two but for most cases 
+use of multiple anchor points (comparing beta with 2-3 individuals should clarify the causes). 
+You will see that we have both in our dataset!  
+
+Originally, since Sonia has worked a bit on adding the hubs in the core family pedigree I  simply started 
+from there which led to a more complicated process. I will now attempt to redo the procedure in a simpler manner by utilizing the pedigree - genomic comparison only. I expect the same results.  
+
+Lets make some kinship matrices, index them and identify differences. 
+```{r kinship matrices}
+kp <- kinship(p$id,p$dadid,p$momid)  # swiss pedigree kinship matrix
+binp <- match(rownames(b), rownames(kp)) # get index of sequenced samples in kp
+kp <- kp[binp,binp] # subset pedigree matrix to include only sequenced samples 
+```  
+
+Since I might want to calculate differences many times I will create a function that does this.  
+```{r functions}
+# return difference matrix
+diff.k <- function(mat1, mat2){
+  if(setequal(rownames(mat1),rownames(mat2))){
+  d1 <- as.matrix(mat1 - mat2)
+  return(d1)
+  }else { print('matrix missmatch')}
+}
+# color transparency function by Tristan
+add.alpha <- function(col, alpha=1){
+  if(missing(col))
+    stop("Please provide a vector of colours.")
+  apply(sapply(col, col2rgb)/255, 2, 
+        function(x) 
+          rgb(x[1], x[2], x[3], alpha=alpha))  
+}
+#plotting function
+plot.diff <- function(d.mat,cutoff){
+  corrplot(d.mat, method='shade',type='upper',tl.pos='n',is.corr=F,diag=F)
+  plot(d.mat[upper.tri(d.mat,diag=T)], pch=20, col = add.alpha('black',0.6),cex=0.6)
+  abline(h=cutoff,lty=2,col='red')
+  abline(h=-cutoff,lty=2,col='red')
+}
+```  
+
+Lets visualize the initial differences of ped and b.  
+```{r visualize 1}
+d <- diff.k(kp,b)
+plot.diff(d,0.16)
+```   
+
+Arguably the matrix difference plot is not the most helpful but I like looking at it! 
+Now we can identify these pais of individuals that lead to most extreme differences (abs(k.diff)>0.16) 
+and the reason we only consider these differences is because they are probably the only ones we can correct since 2 degrees of relatedness are much harder to infer.   
+We will treat all errors separately but our tools are the same. Pairwise b estimation of individuals 
+and their relatives, k0-k1 plots to identify directionality of 1st degree links (P-O or Siblings) 
+and the first year individuals were observed (example if an individual was observed in 2014 and
+another in 2016 and we observe a P-O link)
