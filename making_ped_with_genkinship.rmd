@@ -22,10 +22,8 @@ library(dplyr) # probably not used
 library(corrplot) # well....corrplots
 library(knitr) # kable ! 
 #setwd('C:/Users/topalw/Desktop/PhD/Analyses/5.ref_panel/')
-metadata <- read.csv('metadata/refpanel_metadata.csv')
-s <- read.delim('Ped_file_Ref_panel_final.txt',sep='',h=F) # s-equenced pedigree
-colnames(s) <- c('famid','id','dadid','momid','sex','miss','hub')
-b <- read.table('beta_of_all/swiss_beta_matrix.table') # b-eta table of kinship
+metadata <- read.csv('refpanel_metadata.csv')
+b <- read.table('swiss_beta_matrix.table') # b-eta table of kinship
 b <- b[-which(rownames(b)=='877825F2'),-which(rownames(b)=='877825F2')] #to avoid duplicated issue
 rownames(b) <- metadata$NEWname[match(rownames(b),metadata$rawVCFname)]
 k0 <- read.table('ref_panel_k0.table')
