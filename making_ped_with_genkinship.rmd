@@ -311,7 +311,7 @@ kable(bl,caption = 'Bad links - update2' )
 
 All that is left is that M026452 which we have to decide what to do with.   
 
-Now we can write a list of individuals to keep along with an updated pedigree in some other files.   
+Now we can write a list of individuals to keep along with an updated pedigree in two files.   
 
 Also lets make a succint pedigree that can be plotted ! 
 ```{r output files and plots}
@@ -340,15 +340,16 @@ ppk <- kinship(pp$id, pp$dadid,pp$momid) # kinship of this ped
 # comparison of kinship of total ped with this ped to see if we are missing a lot of links
 kmpinpp <- match(rownames(kmp), rownames(ppk))
 dtmp <- diff.k(kmp,ppk[kmpinpp,kmpinpp])
-plot.diff(dtmp,0.16) # looks ok
-
+plot(dtmp[upper.tri(dtmp,diag=T)], pch=20, col = add.alpha('black',0.6),cex=0.6,
+       ylab='full pedigree - succint pedigree kinship',ylim =c(-0.5,0.5))
+# looks oK 
 pp.ped <- pedigree(pp$id,pp$dadid,pp$momid,pp$sex,pp$seq)
 plot(pp.ped,cex=0.2)
 
-# print it in PDF 
+# plot them in PDF 
 pdf('succint_sequenced_ped.pdf',height=10,width=24)
 plot(dtmp[upper.tri(dtmp,diag=T)], pch=20, col = add.alpha('black',0.6),cex=0.6,
-       ylab='full pedigree pedigree - succint pedigree kinship',ylim =c(-0.5,0.5))
+       ylab='full pedigree - succint pedigree kinship',ylim =c(-0.5,0.5))
 abline(h=0,lty=2)
 abline(h=0.1,lty=2)
 abline(h=0.2,lty=2)
@@ -356,7 +357,7 @@ plot(pp.ped,cex=0.4,symbolsize = 0.6)
 dev.off()
 ```  
 
-Individuals that have been blacked out are sequenced ones... This captures almost all of our links while being small enough to be plot-able.  
+Individuals that have been blacked out are sequenced ones (not kept but overall sequenced)... This captures almost all of our links while being small enough to be plot-able.  
 
 Cheers!  
 
