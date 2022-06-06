@@ -153,7 +153,7 @@ update.diff <- function(mp,b){ # takes a pedigree and a beta matrix
 }
 #function to make founder line for ped
 add.founder <- function(id,sex=1){
-  return(data.frame('id'=id,'dadid'=NA,'momid'=NA,'sex'=sex))
+  return(data.frame('id'=id,'dadid'=rep(NA,length(id)),'momid'=rep(NA,length(id)),'sex'=rep(sex,length(id))))
 }
 bl <- update.diff(mp,b)
 kable(bl,caption = 'Bad links - update1' )
