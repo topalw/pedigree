@@ -122,7 +122,7 @@ abline(v=0.0335,lty=2)
 diag(bu) <- 0
 corrplot(bu, tl.pos='n',diag = F,method = 'shade',is.corr = F)
 unrelated1 <- metadata[match(rownames(bu),metadata$NEWname),] # ~75 at 0.0335
-write.csv(unrelated1, 'unrelated_0335_kinship.csv',quote=F,row.names = F)
+write.csv(unrelated1, 'unrelated_0335_kinship_100622.csv',quote=F,row.names = F)
 ```  
 
 
