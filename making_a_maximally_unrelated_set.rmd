@@ -19,6 +19,7 @@ library(kinship2)
 library(igraph)
 library(knitr)
 library(corrplot)
+library(SNPRelate)
 dp <- read.delim('depth_stats_all.idepth')
 ped <- read.csv('genetically_fixed_pedigree.csv')
 pedk <- kinship(ped$id, ped$dadid,ped$momid)
@@ -41,7 +42,7 @@ kin2adj <- function(bmat, cutoff){
   diag(tmp) <- 0
   return(tmp)
 }
-g1 <- graph_from_adjacency_matrix(kin2adj(b,0.2),mode = 'undirected',add.colnames = rownames(b),add.rownames = rownames(b))
+g1 <- graph_from_adjacency_matrix(kin2adj(b,0.2),mode = 'undirected')
 plot(g1)
 #mis <- largest_ivs(g1) # prohibitingly slow !!!
 ```   
@@ -115,16 +116,37 @@ find.unrelated <- function(b,cutoff){
   }
   return(bu)
 }
-bu <- find.unrelated(bu,0.0335)
+bu <- find.unrelated(bu,0.04)
 dim(bu)
 hist(as.numeric(bu),breaks=100)
 abline(v=0.0335,lty=2)
 diag(bu) <- 0
 corrplot(bu, tl.pos='n',diag = F,method = 'shade',is.corr = F)
-unrelated1 <- metadata[match(rownames(bu),metadata$NEWname),] # ~75 at 0.0335
-write.csv(unrelated1, 'unrelated_0335_kinship_100622.csv',quote=F,row.names = F)
+#unrelated1 <- metadata[match(rownames(bu),metadata$NEWname),] # ~75 at 0.0335
+#write.csv(unrelated1, 'unrelated_0335_kinship_100622.csv',quote=F,row.names = F)
 ```  
 
 
-This gives us a stringent set of unrelated individuals. Lowering the limit in the manual part in the end can make the cutoff more stringent.  
-The code works and is very fast (not our code - this one is slow but thankfully it only has to prune a few individuals - since kinship2 does most of the work)...
+This gives us a stringent set of unrelated individuals. Lowering the limit in the manual part in the end can make the cutoff more stringent. We choose 0.03125 (- 0.0335 a bit more to allow for variance in beta) which represents 4th degree distant relatedness and prunes relatedness well enough without reducing the sample size significantly. 
+The code works and is very fast (not our code - this one is slow but thankfully it only has to prune a few individuals - since kinship2 does most of the work)...   
+
+## Europe.  
+
+And for the Europeans we can follow the same procedure, but here a strict cutoff on kinship will not be representative of true kinship (kinship was normalized on average of whole dataset but family structure and overrepresentation of CH has an impact). Specifically, the mean relatedness is a bit higher than expected from an unrelated sample and this means that we expect more negative values than normal. This should not impact our cutoff.
+
+```{r europeans unrelated,fig.show='hold'}
+geno <- snpgdsOpen('ref_panel_snps_f1_masked_maf05_miss05_LDpruned.gds')
+beu <- snpgdsIndivBeta(geno,autosome.only = F)
+beur <- snpgdsIndivBetaRel(beu,mean(beu$beta))
+indx1 <- match(metadata$rawVCFname[metadata$pop !='CH'], beur$sample.id)
+eub <- beur$beta[indx1, indx1]
+rownames(eub) <- beur$sample.id[indx1]
+nrow(eub)
+hist(eub,breaks=100)
+abline(v=0.2)
+abline(v=0.1)
+abline(v=0.0335)
+nrow(find.unrelated(eub,0.2))
+nrow(find.unrelated(eub,0.12))
+nrow(find.unrelated(eub,0.0335))
+```
