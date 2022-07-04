@@ -102,6 +102,7 @@ kable(related[1:10,],caption='related individuals with # of links' )
 Now we can prune this list by removing the individuals with the biggest # of pairs and then recalculating this list and then removing again until list is empty.   
 
 ```{r sequential removal, fig.show='hold'}
+bu <- as.matrix(b[rownames(b) %in% unrel1,rownames(b) %in% unrel1])
 find.unrelated <- function(b,cutoff){
   bu <- b
   # initialize pairs   
@@ -116,14 +117,15 @@ find.unrelated <- function(b,cutoff){
   }
   return(bu)
 }
-bu <- find.unrelated(bu,0.04)
+bu <- find.unrelated(bu,0.01)
 dim(bu)
-hist(as.numeric(bu),breaks=100)
+hist(as.numeric(bu),breaks=140,xlim=c(-.1,.1),main='histogram of genomic kinship of unrelated samples',
+     xlab='beta')
 abline(v=0.0335,lty=2)
 diag(bu) <- 0
 corrplot(bu, tl.pos='n',diag = F,method = 'shade',is.corr = F)
 #unrelated1 <- metadata[match(rownames(bu),metadata$NEWname),] # ~75 at 0.0335
-#write.csv(unrelated1, 'unrelated_0335_kinship_100622.csv',quote=F,row.names = F)
+#write.csv(unrelated1, 'unrelated_001_kinship_42_040722.csv',quote=F,row.names = F)
 ```  
 
 
