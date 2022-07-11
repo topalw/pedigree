@@ -2,8 +2,7 @@
 title: "Finding founders - Making a maximum independent set"
 author: "Alexandros Topaloudis"
 output:
-  html_document:
-  df_print: paged
+  github_document: default
 ---
 
 # Making an unrelated set  
