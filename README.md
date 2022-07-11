@@ -26,6 +26,7 @@ Using `succint_ped.csv` and through `making_a_set_of_families.r` we can plot `su
 ## Selecting unrelated individuals 
 
 Selecting unrelated individuals is focused around `making_a_maximally_unrelated_set.rmd` and its `.html` knitted output and uses initially the `swiss_beta_matrix.table` for the swiss individuals but after the `ref_panel_snps_f1_masked_maf05_miss05_LDpruned.gds` for the EU individuals. It also outputs the `unrelated_0335_kinship.csv` which includes a set of 76 swiss individuals pruned at 0.0335 kinship.   
+At some point I decided that we need a different cutoff of unrelated individuals and added unrelated_001_kinship_42_040722.csv and a pdf with a couple of plots for the beta of these guys. They show promising results in smc++.   
 
 ## WhatsHap phasing pedigree 
 

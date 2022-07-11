@@ -133,7 +133,7 @@ The code works and is very fast (not our code - this one is slow but thankfully 
 
 ## Europe.  
 
-And for the Europeans we can follow the same procedure, but here a strict cutoff on kinship will not be representative of true kinship (kinship was normalized on average of whole dataset but family structure and overrepresentation of CH has an impact). Specifically, the mean relatedness is a bit higher than expected from an unrelated sample and this means that we expect more negative values than normal. This should not impact our cutoff.
+And for the Europeans we can follow the same procedure, but here a strict cutoff on kinship will not be representative of true kinship (kinship was normalized on average of whole dataset but family structure and overrepresentation of CH has an impact). Specifically, the mean relatedness is a bit higher than expected from an unrelated sample and this means that we expect more negative values than normal. This should not impact our cutoff. However when we filter for 0.05 cutoff we see IS sample dropping out ???
 
 ```{r europeans unrelated,fig.show='hold'}
 geno <- snpgdsOpen('ref_panel_snps_f1_masked_maf05_miss05_LDpruned.gds')
@@ -148,6 +148,9 @@ abline(v=0.2)
 abline(v=0.1)
 abline(v=0.0335)
 nrow(find.unrelated(eub,0.2))
-nrow(find.unrelated(eub,0.12))
+nrow(find.unrelated(eub,0.1))
 nrow(find.unrelated(eub,0.0335))
+eub.un <- find.unrelated(eub,0.05)
+# IS-sue 
+corrplot(beur$beta[grep('IS',beur$sample.id),grep('IS',beur$sample.id)], method = 'number') # all values > 0.05! 
 ```
